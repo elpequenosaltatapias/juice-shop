@@ -28,7 +28,7 @@ jobs:
       - name: Iniciar aplicación
         run: |
           npm start &
-          sleep 30
+          sleep 60
 
       # 5. Instalar OWASP ZAP
       - name: Instalar ZAP

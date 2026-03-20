@@ -1,0 +1,67 @@
+name: DAST Scan with OWASP ZAP
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Clonar el repositorio
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      # 2. Instalar Node.js (para Juice Shop)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 3. Instalar dependencias
+      - name: Instalar dependencias
+        run: npm install
+
+      # 4. Arrancar Juice Shop
+      - name: Iniciar aplicación
+        run: |
+          npm start &
+          sleep 30
+
+      # 5. Instalar OWASP ZAP
+      - name: Instalar ZAP
+        run: sudo apt-get update && sudo apt-get install zaproxy -y
+
+      # 6. Crear archivo de configuración de ZAP
+      - name: Crear configuración ZAP
+        run: |
+          cat > zap_scan.yaml << 'EOF'
+          jobs:
+            - type: spider
+              parameters:
+                url: "http://localhost:3000"
+                maxDuration: 2
+            - type: activeScan
+              parameters:
+                url: "http://localhost:3000"
+                recurse: true
+                maxDuration: 5
+            - type: report
+              parameters:
+                template: traditional-html
+                reportFile: zap_report.html
+                reportTitle: "ZAP Scan Report"
+          EOF
+
+      # 7. Ejecutar escaneo
+      - name: Ejecutar ZAP Scan
+        run: zaproxy -cmd -autorun zap_scan.yaml
+
+      # 8. Guardar el informe
+      - name: Subir reporte
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZAP-Report
+          path: zap_report.html
